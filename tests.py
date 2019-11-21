@@ -6,21 +6,21 @@ import MySQLdb
 import warnings
 import sys
 
-class ApiTestCase(unittest.TestCase):
 
+class ApiTestCase(unittest.TestCase):
     backend = 'file'
 
     def getConnectionString(self):
-        if (self.backend == 'mysql'):
+        if self.backend == 'mysql':
             return 'mysql://root:oxford@localhost/test'
         else:
             return 'xml:///tmp/simple_book.gnucash'
 
     def getSessionSettings(self):
         return dict(
-            connection_string = self.getConnectionString(),
-            is_new = '1',
-            ignore_lock = '0'
+            connection_string=self.getConnectionString(),
+            is_new='1',
+            ignore_lock='0'
         )
 
     def setUp(self):
@@ -28,7 +28,7 @@ class ApiTestCase(unittest.TestCase):
         self.app.testing = True
 
     def setup_database(self):
-        if (self.backend == 'mysql'):
+        if self.backend == 'mysql':
             database = MySQLdb.connect(host='localhost', user='root', passwd='oxford')
             cursor = database.cursor()
             sql = 'CREATE DATABASE test'
@@ -39,8 +39,8 @@ class ApiTestCase(unittest.TestCase):
             database = None
 
     def teardown_database(self):
-        if (self.backend == 'mysql'):
-            warnings.filterwarnings('ignore', category = MySQLdb.Warning)
+        if self.backend == 'mysql':
+            warnings.filterwarnings('ignore', category=MySQLdb.Warning)
             database = MySQLdb.connect(host='localhost', user='root', passwd='oxford')
             cursor = database.cursor()
             sql = 'DROP DATABASE IF EXISTS test'
@@ -50,10 +50,11 @@ class ApiTestCase(unittest.TestCase):
             cursor = None
             database = None
 
-    # probably not the most pythonic way to do this
-    def clean(self, data):
+    @staticmethod
+    def clean(data):
+        # probably not the most pythonic way to do this
         # convert bytes to Python 3 string if required
-        if sys.version_info >= (3,0):
+        if sys.version_info >= (3, 0):
             return data.decode("utf-8")
         else:
             return data
@@ -79,10 +80,10 @@ class ApiTestCase(unittest.TestCase):
     def createVendor(self):
 
         data = dict(
-            id = '999999',
-            name = 'Test vendor',
-            address_line_1 = 'Test address',
-            currency = 'GBP'
+            id='999999',
+            name='Test vendor',
+            address_line_1='Test address',
+            currency='GBP'
         )
 
         return json.loads(self.clean(self.app.post('/vendors', data=data).data))
@@ -90,10 +91,10 @@ class ApiTestCase(unittest.TestCase):
     def createCustomer(self):
 
         data = dict(
-            id = '999999',
-            name = 'Test customer',
-            address_line_1 = 'Test address',
-            currency = 'GBP'
+            id='999999',
+            name='Test customer',
+            address_line_1='Test address',
+            currency='GBP'
         )
 
         return json.loads(self.clean(self.app.post('/customers', data=data).data))
@@ -101,33 +102,34 @@ class ApiTestCase(unittest.TestCase):
     def createInvoice(self):
 
         data = dict(
-            id = '999999',
-            customer_id = self.createCustomer()['id'],
-            date_opened = '2010-01-01',
-            currency = 'GBP'
+            id='999999',
+            customer_id=self.createCustomer()['id'],
+            date_opened='2010-01-01',
+            currency='GBP'
         )
 
         return json.loads(self.clean(self.app.post('/invoices', data=data).data))
 
     def createEntry(self):
-        data=dict(
-            date = '2010-01-01',
-            discount_type = '1',
-            account_guid = self.createAccount()['guid'],
-            quantity = 1,
-            price = '1.00',
-            discount = '0'
+        data = dict(
+            date='2010-01-01',
+            discount_type='1',
+            account_guid=self.createAccount()['guid'],
+            quantity=1,
+            price='1.00',
+            discount='0'
         )
 
-        return json.loads(self.clean(self.app.post('/invoices/' + self.createInvoice()['id'] + '/entries', data=data).data))
+        return json.loads(
+            self.clean(self.app.post('/invoices/' + self.createInvoice()['id'] + '/entries', data=data).data))
 
     def createBill(self):
 
         data = dict(
-            id = '999999',
-            vendor_id = self.createVendor()['id'],
-            date_opened = '2010-01-01',
-            currency = 'GBP'
+            id='999999',
+            vendor_id=self.createVendor()['id'],
+            date_opened='2010-01-01',
+            currency='GBP'
         )
 
         return json.loads(self.clean(self.app.post('/bills', data=data).data))
@@ -135,12 +137,13 @@ class ApiTestCase(unittest.TestCase):
     def createAccount(self):
 
         data = dict(
-            name = 'Test',
-            currency  = 'GBP',
-            account_type_id = '2'
+            name='Test',
+            currency='GBP',
+            account_type_id='2'
         )
 
         return json.loads(self.clean(self.app.post('/accounts', data=data).data))
+
 
 class ApiSessionTestCase(ApiTestCase):
 
@@ -157,11 +160,11 @@ class ApiSessionTestCase(ApiTestCase):
         assert self.clean(response.data) == '"Session started"'
 
     def tearDown(self):
-
         response = self.app.delete('/session')
         assert self.clean(response.data) == '"Session ended"'
 
         self.teardown_database()
+
 
 class RootTestCase(ApiTestCase):
 
@@ -177,6 +180,7 @@ class RootTestCase(ApiTestCase):
 
         del gnucash_rest.app.cors_origin
 
+
 class SessionTestCase(ApiTestCase):
 
     def test_no_session(self):
@@ -189,19 +193,19 @@ class SessionTestCase(ApiTestCase):
 
     def test_session_connection_string(self):
         data = dict(
-            connection_string = self.getConnectionString()
+            connection_string=self.getConnectionString()
         )
         assert self.get_error_type('post', '/session', data) == 'InvalidIsNew'
 
     def test_session_isnew(self):
         data = dict(
-            connection_string = self.getConnectionString(),
+            connection_string=self.getConnectionString(),
             is_new='1'
         )
         assert self.get_error_type('post', '/session', data) == 'InvalidIgnoreLock'
 
     def test_session_auto_error(self):
-        if (self.backend == 'mysql'):
+        if self.backend == 'mysql':
             gnucash_rest.app.connection_string = 'mysql://root:oxford@localhost/none'
         else:
             gnucash_rest.app.connection_string = 'xml:///tmp/simple_book.gnucash'
@@ -211,7 +215,7 @@ class SessionTestCase(ApiTestCase):
 
         self.setup_database()
 
-        if (self.backend == 'mysql'):
+        if self.backend == 'mysql':
             # Logs
             # CRIT <gnc.backend.dbi> [GncDbiBackend<Type>::session_begin()] Database 'none' does not exist
             assert gnucash_rest.startup().data['code'] == 'ERR_BACKEND_NO_SUCH_DB'
@@ -226,7 +230,7 @@ class SessionTestCase(ApiTestCase):
 
     def test_session_auto(self):
         # for this to work with files we need a file available
-        if (self.backend == 'mysql'):
+        if self.backend == 'mysql':
             gnucash_rest.app.connection_string = self.getConnectionString()
 
             # remove the database in case tests failed previously
@@ -271,7 +275,7 @@ class SessionTestCase(ApiTestCase):
 
     def test_no_method(self):
         assert self.app.open('/session', method='NONE').status == '405 METHOD NOT ALLOWED'
-        
+
 
 class AccountsTestCase(ApiTestCase):
 
@@ -286,6 +290,7 @@ class AccountsTestCase(ApiTestCase):
 
     def test_account_get_splits_no_session(self):
         assert self.get_error_type('get', '/accounts/none/splits', dict()) == 'SessionDoesNotExist'
+
 
 class AccountsSessionTestCase(ApiTestCase):
 
@@ -302,71 +307,64 @@ class AccountsSessionTestCase(ApiTestCase):
         assert self.clean(response.data) == '"Session started"'
 
     def tearDown(self):
-
         response = self.app.delete('/session')
         assert self.clean(response.data) == '"Session ended"'
 
         self.teardown_database()
 
     def test_accounts(self):
-
         response = json.loads(self.clean(self.app.get('/accounts').data))
         assert response['name'] == 'Root Account'
 
     # need tests for mangled add accounts
 
     def test_add_top_account(self):
-
         response = json.loads(self.clean(self.app.post('/accounts', data=dict(
-            name = 'Test',
-            currency  = 'GBP',
-            account_type_id = '2'
+            name='Test',
+            currency='GBP',
+            account_type_id='2'
         )).data))
 
         assert response['name'] == 'Test'
 
     def test_add_account_no_data(self):
-
         data = dict()
 
         assert self.get_error_type('post', '/accounts', data) == 'NoAccountName'
 
     def test_add_account_no_currency(self):
         data = dict(
-            name = 'Test'
+            name='Test'
         )
         assert self.get_error_type('post', '/accounts', data) == 'InvalidAccountCurrency'
 
     def test_add_account_invalid_currency(self):
-
         data = dict(
-            name = 'Test',
-            currency  = 'XYZ'
+            name='Test',
+            currency='XYZ'
         )
 
         assert self.get_error_type('post', '/accounts', data) == 'InvalidAccountCurrency'
 
-    def test_add_account_invalid_acount_type(self):
-
+    def test_add_account_invalid_account_type(self):
         data = dict(
-            name = 'Test',
-            currency  = 'GBP',
-            account_type_id = 'X',
+            name='Test',
+            currency='GBP',
+            account_type_id='X',
         )
 
         assert self.get_error_type('post', '/accounts', data) == 'InvalidAccountTypeID'
 
     def test_add_account(self):
-
         # this is test_accounts
         response = json.loads(self.clean(self.app.get('/accounts').data))
         assert response['name'] == 'Root Account'
 
         response = json.loads(self.clean(self.app.post('/accounts', data=dict(
-            name = 'Test',
-            currency  = 'GBP',
-            account_type_id = '2',
-            parent_account_guid = response['guid'],
+            name='Test',
+            currency='GBP',
+            account_type_id='2',
+            parent_account_guid=response['guid'],
         )).data))
 
         assert response['name'] == 'Test'
@@ -383,7 +381,7 @@ class AccountsSessionTestCase(ApiTestCase):
 
     def test_account_get_splits_no_account(self):
         assert self.app.get('/accounts/none/splits').status == '404 NOT FOUND'
-    
+
     def test_account_get_splits_empty(self):
         account = self.createAccount()
 
@@ -392,21 +390,29 @@ class AccountsSessionTestCase(ApiTestCase):
     # Don't think these are working - lines aren't being tests
 
     def test_account_get_splits_date_posted_from_empty(self):
-        assert self.get_error_type('get', '/accounts/' + self.createAccount()['guid'] + '/splits?date_posted_from=', dict()) == 'InvalidDatePostedFrom'
+        assert self.get_error_type('get', '/accounts/' + self.createAccount()['guid'] + '/splits?date_posted_from=',
+                                   dict()) == 'InvalidDatePostedFrom'
 
     def test_account_get_splits_date_posted_from_invalid(self):
-        assert self.get_error_type('get', '/accounts/' + self.createAccount()['guid'] + '/splits?date_posted_from=XXX', dict()) == 'InvalidDatePostedFrom'
+        assert self.get_error_type('get', '/accounts/' + self.createAccount()['guid'] + '/splits?date_posted_from=XXX',
+                                   dict()) == 'InvalidDatePostedFrom'
+
     def test_account_get_splits_date_posted_from(self):
-        assert json.loads(self.clean(self.app.get('/accounts/' + self.createAccount()['guid'] + '/splits?date_posted_from=2010-01-01').data)) == []
+        assert json.loads(self.clean(self.app.get(
+            '/accounts/' + self.createAccount()['guid'] + '/splits?date_posted_from=2010-01-01').data)) == []
 
     def test_account_get_splits_date_posted_to_empty(self):
-        assert self.get_error_type('get', '/accounts/' + self.createAccount()['guid'] + '/splits?date_posted_to=', dict()) == 'InvalidDatePostedTo'
+        assert self.get_error_type('get', '/accounts/' + self.createAccount()['guid'] + '/splits?date_posted_to=',
+                                   dict()) == 'InvalidDatePostedTo'
 
     def test_account_get_splits_date_posted_to_invalid(self):
-        assert self.get_error_type('get', '/accounts/' + self.createAccount()['guid'] + '/splits?date_posted_to=XXX', dict()) == 'InvalidDatePostedTo'
+        assert self.get_error_type('get', '/accounts/' + self.createAccount()['guid'] + '/splits?date_posted_to=XXX',
+                                   dict()) == 'InvalidDatePostedTo'
 
     def test_account_get_splits_date_posted_to(self):
-        assert json.loads(self.clean(self.app.get('/accounts/' + self.createAccount()['guid'] + '/splits?date_posted_to=2010-01-01').data)) == []
+        assert json.loads(self.clean(
+            self.app.get('/accounts/' + self.createAccount()['guid'] + '/splits?date_posted_to=2010-01-01').data)) == []
+
 
 class TransactionsTestCase(ApiTestCase):
 
@@ -415,6 +421,7 @@ class TransactionsTestCase(ApiTestCase):
 
     def test_transaction_no_session(self):
         assert self.get_error_type('post', '/transactions/none', dict()) == 'SessionDoesNotExist'
+
 
 class TransactionsSessionTestCase(ApiTestCase):
 
@@ -431,36 +438,34 @@ class TransactionsSessionTestCase(ApiTestCase):
         assert self.clean(response.data) == '"Session started"'
 
     def tearDown(self):
-
         response = self.app.delete('/session')
         assert self.clean(response.data) == '"Session ended"'
 
         self.teardown_database()
 
     def createTransaction(self):
-
         # Gnucash does allow a transaction to be across the same accounts so this test is correct!
 
         # this is test_accounts
         splitaccount1 = json.loads(self.clean(self.app.post('/accounts', data=dict(
-            name = 'Test',
-            currency  = 'GBP',
-            account_type_id = '2'
+            name='Test',
+            currency='GBP',
+            account_type_id='2'
         )).data))
 
         splitaccount2 = json.loads(self.clean(self.app.post('/accounts', data=dict(
-            name = 'Test 2',
-            currency  = 'GBP',
-            account_type_id = '2'
+            name='Test 2',
+            currency='GBP',
+            account_type_id='2'
         )).data))
 
         data = dict(
-            currency = 'GBP',
-            date_posted = '2018-01-01',
-            splitaccount1 = splitaccount1['guid'],
-            splitaccount2 = splitaccount2['guid'],
-            splitvalue1 = '0',
-            splitvalue2 = '0'
+            currency='GBP',
+            date_posted='2018-01-01',
+            splitaccount1=splitaccount1['guid'],
+            splitaccount2=splitaccount2['guid'],
+            splitvalue1='0',
+            splitvalue2='0'
         )
 
         return json.loads(self.clean(self.app.post('/transactions', data=data).data))
@@ -478,52 +483,51 @@ class TransactionsSessionTestCase(ApiTestCase):
 
     def test_add_transaction_invalid_currency(self):
         data = dict(
-            currency = 'XYZ'
+            currency='XYZ'
         )
         assert self.get_error_type('post', '/transactions', data) == 'InvalidTransactionCurrency'
 
     def test_add_transaction_no_date_posted(self):
         data = dict(
-            currency = 'GBP'
+            currency='GBP'
         )
         assert self.get_error_type('post', '/transactions', data) == 'InvalidDatePosted'
 
     def test_add_transaction_invalid_date_posted(self):
         data = dict(
-            currency = 'GBP',
-            posted_date = 'XXX'
+            currency='GBP',
+            posted_date='XXX'
         )
         assert self.get_error_type('post', '/transactions', data) == 'InvalidDatePosted'
 
     def test_add_transaction_no_split_account(self):
         data = dict(
-            currency = 'GBP',
-            date_posted = '2018-01-01'
+            currency='GBP',
+            date_posted='2018-01-01'
         )
         assert self.get_error_type('post', '/transactions', data) == 'NoSplits'
-    
-    def test_add_transaction_single_no_split_value(self):
 
+    def test_add_transaction_single_no_split_value(self):
         # this is test_accounts
         splitaccount1 = json.loads(self.clean(self.app.post('/accounts', data=dict(
-            name = 'Test',
-            currency  = 'GBP',
-            account_type_id = '2'
+            name='Test',
+            currency='GBP',
+            account_type_id='2'
         )).data))
 
         data = dict(
-            currency = 'GBP',
-            date_posted = '2018-01-01',
-            splitaccount1 = splitaccount1['guid'],
+            currency='GBP',
+            date_posted='2018-01-01',
+            splitaccount1=splitaccount1['guid'],
         )
         assert self.get_error_type('post', '/transactions', data) == 'NoSplits'
 
     def test_add_transaction_invalid_split_account(self):
         data = dict(
-            currency = 'GBP',
-            date_posted = '2018-01-01',
-            splitvalue1 = '1.5',
-            splitaccount1 = 'XXX'
+            currency='GBP',
+            date_posted='2018-01-01',
+            splitvalue1='1.5',
+            splitaccount1='XXX'
         )
         assert self.get_error_type('post', '/transactions', data) == 'InvalidSplitAccount'
 
@@ -532,152 +536,154 @@ class TransactionsSessionTestCase(ApiTestCase):
 
         # this is test_accounts
         splitaccount1 = json.loads(self.clean(self.app.post('/accounts', data=dict(
-            name = 'Test',
-            currency  = 'GBP',
-            account_type_id = '2'
+            name='Test',
+            currency='GBP',
+            account_type_id='2'
         )).data))
 
         data = dict(
-            currency = 'GBP',
-            date_posted = '2018-01-01',
-            splitvalue1 = '1.5',
-            splitaccount1 = splitaccount1['guid']
+            currency='GBP',
+            date_posted='2018-01-01',
+            splitvalue1='1.5',
+            splitaccount1=splitaccount1['guid']
         )
 
         assert self.app.post('/transactions', data=data).status == '201 CREATED'
 
     def test_add_transaction_invalid_account_currency(self):
-
         # this is test_accounts
         splitaccount1 = json.loads(self.clean(self.app.post('/accounts', data=dict(
-            name = 'Test',
-            currency  = 'GBP',
-            account_type_id = '2'
+            name='Test',
+            currency='GBP',
+            account_type_id='2'
         )).data))
 
         splitaccount2 = json.loads(self.clean(self.app.post('/accounts', data=dict(
-            name = 'Test 2',
-            currency  = 'GBP',
-            account_type_id = '2'
+            name='Test 2',
+            currency='GBP',
+            account_type_id='2'
         )).data))
 
         data = dict(
-            currency = 'EUR',
-            date_posted = '2018-01-01',
-            splitvalue1 = '1.5',
-            splitaccount1 = splitaccount1['guid'],
-            splitvalue2 = '1.5',
-            splitaccount2 = splitaccount2['guid'],
+            currency='EUR',
+            date_posted='2018-01-01',
+            splitvalue1='1.5',
+            splitaccount1=splitaccount1['guid'],
+            splitvalue2='1.5',
+            splitaccount2=splitaccount2['guid'],
         )
         assert self.get_error_type('post', '/transactions', data) == 'InvalidSplitAccountCurrency'
-    
+
     def test_add_transaction_identical_split_account(self):
         # Gnucash does allow a transaction to be across the same accounts so this test is correct!
 
         # this is test_accounts
         splitaccount1 = json.loads(self.clean(self.app.post('/accounts', data=dict(
-            name = 'Test',
-            currency  = 'GBP',
-            account_type_id = '2'
+            name='Test',
+            currency='GBP',
+            account_type_id='2'
         )).data))
 
         splitaccount2 = json.loads(self.clean(self.app.post('/accounts', data=dict(
-            name = 'Test 2',
-            currency  = 'GBP',
-            account_type_id = '2'
+            name='Test 2',
+            currency='GBP',
+            account_type_id='2'
         )).data))
 
         data = dict(
-            currency = 'GBP',
-            date_posted = '2018-01-01',
-            splitaccount1 = splitaccount1['guid'],
-            splitvalue1 = '1.5',
-            splitaccount2 = splitaccount2['guid'],
-            splitvalue2 = '1.5',
+            currency='GBP',
+            date_posted='2018-01-01',
+            splitaccount1=splitaccount1['guid'],
+            splitvalue1='1.5',
+            splitaccount2=splitaccount2['guid'],
+            splitvalue2='1.5',
         )
 
         assert self.app.post('/transactions', data=data).status == '201 CREATED'
 
     def test_get_transaction_no_transaction(self):
-
         assert self.app.get('/transactions/none', data=dict()).status == '404 NOT FOUND'
 
     def test_get_transaction(self):
-
         # this is test_accounts
         splitaccount1 = json.loads(self.clean(self.app.post('/accounts', data=dict(
-            name = 'Test',
-            currency  = 'GBP',
-            account_type_id = '2'
+            name='Test',
+            currency='GBP',
+            account_type_id='2'
         )).data))
 
         splitaccount2 = json.loads(self.clean(self.app.post('/accounts', data=dict(
-            name = 'Test 2',
-            currency  = 'GBP',
-            account_type_id = '2'
+            name='Test 2',
+            currency='GBP',
+            account_type_id='2'
         )).data))
 
         data = dict(
-            currency = 'GBP',
-            date_posted = '2018-01-01',
-            splitaccount1 = splitaccount1['guid'],
-            splitvalue1 = '1.5',
-            splitaccount2 = splitaccount2['guid'],
-            splitvalue2 = '1.5',
-            description = 'Test transaction',
-            num = '0000001'
+            currency='GBP',
+            date_posted='2018-01-01',
+            splitaccount1=splitaccount1['guid'],
+            splitvalue1='1.5',
+            splitaccount2=splitaccount2['guid'],
+            splitvalue2='1.5',
+            description='Test transaction',
+            num='0000001'
         )
 
         response = json.loads(self.clean(self.app.post('/transactions', data=data).data))
 
-        transaction = json.loads(self.clean(self.app.get('/transactions/' +  response['guid'], data=dict()).data))
+        transaction = json.loads(self.clean(self.app.get('/transactions/' + response['guid'], data=dict()).data))
 
         assert transaction['description'] == 'Test transaction'
 
     def test_update_transaction_invalid_guid(self):
-        assert self.get_error_type('post', '/transactions/' + '00000000000000000000000000000000', dict()) == 'InvalidTransactionGuid'
+        assert self.get_error_type('post', '/transactions/' + '00000000000000000000000000000000',
+                                   dict()) == 'InvalidTransactionGuid'
 
     def test_update_transaction_no_data(self):
-        assert self.get_error_type('post', '/transactions/' + self.createTransactionGuid(), data=dict()) == 'InvalidTransactionCurrency'
+        assert self.get_error_type('post', '/transactions/' + self.createTransactionGuid(),
+                                   data=dict()) == 'InvalidTransactionCurrency'
 
     def test_update_transaction_no_currency(self):
         data = dict(
-            currency = 'XYZ'
+            currency='XYZ'
         )
 
-        assert self.get_error_type('post', '/transactions/' + self.createTransactionGuid(), data=data) == 'InvalidTransactionCurrency'
+        assert self.get_error_type('post', '/transactions/' + self.createTransactionGuid(),
+                                   data=data) == 'InvalidTransactionCurrency'
 
     def test_update_transaction_invalid_currency(self):
         data = dict(
-            currency = 'GBP',
-            date_posted = 'XXX'
+            currency='GBP',
+            date_posted='XXX'
         )
 
-        assert self.get_error_type('post', '/transactions/' + self.createTransactionGuid(), data=data) == 'InvalidDatePosted'
+        assert self.get_error_type('post', '/transactions/' + self.createTransactionGuid(),
+                                   data=data) == 'InvalidDatePosted'
 
     def test_update_transaction_no_split_guid(self):
         data = dict(
-            currency = 'GBP',
-            date_posted = '2018-01-01'
+            currency='GBP',
+            date_posted='2018-01-01'
         )
         assert self.get_error_type('post', '/transactions/' + self.createTransactionGuid(), data=data) == 'NoSplits'
 
     def test_update_transaction_invalid_split_guid(self):
         data = dict(
-            currency = 'GBP',
-            date_posted = '2018-01-01',
-            splitguid1 = 'XXX'
+            currency='GBP',
+            date_posted='2018-01-01',
+            splitguid1='XXX'
         )
-        assert self.get_error_type('post', '/transactions/' + self.createTransactionGuid(), data=data) == 'InvalidSplitGuid'
+        assert self.get_error_type('post', '/transactions/' + self.createTransactionGuid(),
+                                   data=data) == 'InvalidSplitGuid'
 
     def test_update_transaction_no_split_account(self):
         transaction = self.createTransaction()
 
         data = dict(
-            currency = 'GBP',
-            date_posted = '2018-01-01',
-            splitguid1 = transaction['splits'][0]['guid'],
-            splitguid2 = transaction['splits'][0]['guid']
+            currency='GBP',
+            date_posted='2018-01-01',
+            splitguid1=transaction['splits'][0]['guid'],
+            splitguid2=transaction['splits'][0]['guid']
         )
 
         assert self.get_error_type('post', '/transactions/' + transaction['guid'], data=data) == 'InvalidSplitAccount'
@@ -686,175 +692,169 @@ class TransactionsSessionTestCase(ApiTestCase):
         transaction = self.createTransaction()
 
         data = dict(
-            currency = 'GBP',
-            date_posted = '2018-01-01',
-            splitguid1 = transaction['splits'][0]['guid'],
-            splitguid2 = transaction['splits'][0]['guid'],
-            splitaccount1 = 'XXX'
+            currency='GBP',
+            date_posted='2018-01-01',
+            splitguid1=transaction['splits'][0]['guid'],
+            splitguid2=transaction['splits'][0]['guid'],
+            splitaccount1='XXX'
         )
 
         assert self.get_error_type('post', '/transactions/' + transaction['guid'], data=data) == 'InvalidSplitAccount'
 
     def test_update_transaction_invalid_split(self):
-
         # this is test_accounts
         splitaccount1 = json.loads(self.clean(self.app.post('/accounts', data=dict(
-            name = 'Test',
-            currency  = 'GBP',
-            account_type_id = '2'
+            name='Test',
+            currency='GBP',
+            account_type_id='2'
         )).data))
 
         splitaccount2 = json.loads(self.clean(self.app.post('/accounts', data=dict(
-            name = 'Test 2',
-            currency  = 'GBP',
-            account_type_id = '2'
+            name='Test 2',
+            currency='GBP',
+            account_type_id='2'
         )).data))
 
         data = dict(
-            currency = 'GBP',
-            date_posted = '2018-01-01',
-            splitaccount1 = splitaccount1['guid'],
-            splitaccount2 = splitaccount2['guid'],
-            splitguid1 = '00000000000000000000000000000000',
-            splitguid2 = '00000000000000000000000000000001'
+            currency='GBP',
+            date_posted='2018-01-01',
+            splitaccount1=splitaccount1['guid'],
+            splitaccount2=splitaccount2['guid'],
+            splitguid1='00000000000000000000000000000000',
+            splitguid2='00000000000000000000000000000001'
 
         )
 
-        assert self.get_error_type('post', '/transactions/' + self.createTransactionGuid(), data=data) == 'InvalidSplitGuid'
+        assert self.get_error_type('post', '/transactions/' + self.createTransactionGuid(),
+                                   data=data) == 'InvalidSplitGuid'
 
     def test_update_transaction_single_invalid_split_account(self):
         transaction = self.createTransaction()
 
         data = dict(
-            currency = 'GBP',
-            date_posted = '2018-01-01',
-            splitaccount1 = transaction['splits'][0]['account']['guid'],
-            splitguid1 = transaction['splits'][0]['guid'],
-            splitvalue1 = '1.5',
-            splitguid2 = transaction['splits'][0]['guid'],
-            splitvalue2 = '1.5'
+            currency='GBP',
+            date_posted='2018-01-01',
+            splitaccount1=transaction['splits'][0]['account']['guid'],
+            splitguid1=transaction['splits'][0]['guid'],
+            splitvalue1='1.5',
+            splitguid2=transaction['splits'][0]['guid'],
+            splitvalue2='1.5'
         )
-        
+
         assert self.get_error_type('post', '/transactions/' + transaction['guid'], data=data) == 'InvalidSplitAccount'
 
     def test_update_transaction_duplicate_split_guid(self):
-
         transaction = self.createTransaction()
 
         data = dict(
-            currency = 'GBP',
-            date_posted = '2018-01-01',
-            splitaccount1 = transaction['splits'][0]['account']['guid'],
-            splitaccount2 = transaction['splits'][1]['account']['guid'],
-            splitguid1 = transaction['splits'][0]['guid'],
-            splitvalue1 = '1.5',
-            splitguid2 = transaction['splits'][0]['guid'],
-            splitvalue2 = '1.5'
+            currency='GBP',
+            date_posted='2018-01-01',
+            splitaccount1=transaction['splits'][0]['account']['guid'],
+            splitaccount2=transaction['splits'][1]['account']['guid'],
+            splitguid1=transaction['splits'][0]['guid'],
+            splitvalue1='1.5',
+            splitguid2=transaction['splits'][0]['guid'],
+            splitvalue2='1.5'
         )
 
         assert self.get_error_type('post', '/transactions/' + transaction['guid'], data=data) == 'DuplicateSplitGuid'
 
     def test_update_transaction_no_split_value(self):
-
         transaction = self.createTransaction()
 
         data = dict(
-            currency = 'GBP',
-            date_posted = '2018-01-01',
-            splitaccount1 = transaction['splits'][0]['account']['guid'],
-            splitaccount2 = transaction['splits'][1]['account']['guid'],
-            splitguid1 = transaction['splits'][0]['guid'],
-            splitguid2 = transaction['splits'][1]['guid'],
-            splitvalue1 = '',
+            currency='GBP',
+            date_posted='2018-01-01',
+            splitaccount1=transaction['splits'][0]['account']['guid'],
+            splitaccount2=transaction['splits'][1]['account']['guid'],
+            splitguid1=transaction['splits'][0]['guid'],
+            splitguid2=transaction['splits'][1]['guid'],
+            splitvalue1='',
 
         )
 
         assert self.get_error_type('post', '/transactions/' + transaction['guid'], data=data) == 'InvalidSplitValue'
 
     def test_update_transaction_invalid_split_value(self):
-
         transaction = self.createTransaction()
 
         data = dict(
-            currency = 'GBP',
-            date_posted = '2018-01-01',
-            splitaccount1 = transaction['splits'][0]['account']['guid'],
-            splitaccount2 = transaction['splits'][1]['account']['guid'],
-            splitguid1 = transaction['splits'][0]['guid'],
-            splitguid2 = transaction['splits'][1]['guid'],
-            splitvalue1 = 'A',
+            currency='GBP',
+            date_posted='2018-01-01',
+            splitaccount1=transaction['splits'][0]['account']['guid'],
+            splitaccount2=transaction['splits'][1]['account']['guid'],
+            splitguid1=transaction['splits'][0]['guid'],
+            splitguid2=transaction['splits'][1]['guid'],
+            splitvalue1='A',
 
         )
 
         assert self.get_error_type('post', '/transactions/' + transaction['guid'], data=data) == 'InvalidSplitValue'
 
     def test_update_transaction_no_split_value2(self):
-
         transaction = self.createTransaction()
 
         data = dict(
-            currency = 'GBP',
-            date_posted = '2018-01-01',
-            splitaccount1 = transaction['splits'][0]['account']['guid'],
-            splitaccount2 = transaction['splits'][1]['account']['guid'],
-            splitguid1 = transaction['splits'][0]['guid'],
-            splitguid2 = transaction['splits'][1]['guid'],
-            splitvalue1 = '0.5',
-            splitvalue2 = '',
+            currency='GBP',
+            date_posted='2018-01-01',
+            splitaccount1=transaction['splits'][0]['account']['guid'],
+            splitaccount2=transaction['splits'][1]['account']['guid'],
+            splitguid1=transaction['splits'][0]['guid'],
+            splitguid2=transaction['splits'][1]['guid'],
+            splitvalue1='0.5',
+            splitvalue2='',
 
         )
 
         assert self.get_error_type('post', '/transactions/' + transaction['guid'], data=data) == 'InvalidSplitValue'
 
     def test_update_transaction_invalid_split_value2(self):
-
         transaction = self.createTransaction()
 
         data = dict(
-            currency = 'GBP',
-            date_posted = '2018-01-01',
-            splitaccount1 = transaction['splits'][0]['account']['guid'],
-            splitaccount2 = transaction['splits'][1]['account']['guid'],
-            splitguid1 = transaction['splits'][0]['guid'],
-            splitguid2 = transaction['splits'][1]['guid'],
-            splitvalue1 = '0.5',
-            splitvalue2 = 'A',
+            currency='GBP',
+            date_posted='2018-01-01',
+            splitaccount1=transaction['splits'][0]['account']['guid'],
+            splitaccount2=transaction['splits'][1]['account']['guid'],
+            splitguid1=transaction['splits'][0]['guid'],
+            splitguid2=transaction['splits'][1]['guid'],
+            splitvalue1='0.5',
+            splitvalue2='A',
 
         )
 
         assert self.get_error_type('post', '/transactions/' + transaction['guid'], data=data) == 'InvalidSplitValue'
 
     def test_update_transaction_invalid_account_currency(self):
-
         transaction = self.createTransaction()
 
         data = dict(
-            currency = 'EUR',
-            date_posted = '2018-01-01',
-            splitaccount1 = transaction['splits'][0]['account']['guid'],
-            splitaccount2 = transaction['splits'][1]['account']['guid'],
-            splitguid1 = transaction['splits'][0]['guid'],
-            splitguid2 = transaction['splits'][1]['guid'],
-            splitvalue1 = '0.5',
-            splitvalue2 = '0.5',
+            currency='EUR',
+            date_posted='2018-01-01',
+            splitaccount1=transaction['splits'][0]['account']['guid'],
+            splitaccount2=transaction['splits'][1]['account']['guid'],
+            splitguid1=transaction['splits'][0]['guid'],
+            splitguid2=transaction['splits'][1]['guid'],
+            splitvalue1='0.5',
+            splitvalue2='0.5',
         )
 
-        assert self.get_error_type('post', '/transactions/' + transaction['guid'], data=data) == 'InvalidSplitAccountCurrency'
-    
-    def test_update_transaction(self):
+        assert self.get_error_type('post', '/transactions/' + transaction['guid'],
+                                   data=data) == 'InvalidSplitAccountCurrency'
 
+    def test_update_transaction(self):
         transaction = self.createTransaction()
 
         data = dict(
-            currency = 'GBP',
-            description = 'Updated test transaction',
-            date_posted = '2018-01-01',
-            splitaccount1 = transaction['splits'][0]['account']['guid'],
-            splitaccount2 = transaction['splits'][1]['account']['guid'],
-            splitguid1 = transaction['splits'][0]['guid'],
-            splitguid2 = transaction['splits'][1]['guid'],
-            splitvalue1 = '0.5',
-            splitvalue2 = '0.5',
+            currency='GBP',
+            description='Updated test transaction',
+            date_posted='2018-01-01',
+            splitaccount1=transaction['splits'][0]['account']['guid'],
+            splitaccount2=transaction['splits'][1]['account']['guid'],
+            splitguid1=transaction['splits'][0]['guid'],
+            splitguid2=transaction['splits'][1]['guid'],
+            splitvalue1='0.5',
+            splitvalue2='0.5',
 
         )
 
@@ -872,6 +872,7 @@ class TransactionsSessionTestCase(ApiTestCase):
 
         assert self.app.get('/transactions/' + transaction['guid']).status == '404 NOT FOUND'
 
+
 class VendorsTestCase(ApiTestCase):
 
     def test_vendors_no_session(self):
@@ -883,6 +884,7 @@ class VendorsTestCase(ApiTestCase):
     def test_vendor_bills_no_session(self):
         assert self.get_error_type('get', '/vendors/XXX/bills', dict()) == 'SessionDoesNotExist'
 
+
 class VendorsSessionTestCase(ApiSessionTestCase):
 
     def test_add_vendor_no_parameters(self):
@@ -890,34 +892,33 @@ class VendorsSessionTestCase(ApiSessionTestCase):
 
     def test_add_vendor_no_address(self):
         data = dict(
-            name = 'Test vendor'
+            name='Test vendor'
         )
 
         assert self.get_error_type('post', '/vendors', data=data) == 'NoVendorAddress'
 
     def test_add_vendor_no_currency(self):
         data = dict(
-            name = 'Test vendor',
-            address_line_1 = 'Test address'
+            name='Test vendor',
+            address_line_1='Test address'
         )
 
         assert self.get_error_type('post', '/vendors', data=data) == 'InvalidVendorCurrency'
 
     def test_add_vendor_invalid_currency(self):
         data = dict(
-            name = 'Test vendor',
-            address_line_1 = 'Test address',
-            currency = 'XYZ'
+            name='Test vendor',
+            address_line_1='Test address',
+            currency='XYZ'
         )
 
         assert self.get_error_type('post', '/vendors', data=data) == 'InvalidVendorCurrency'
 
     def test_vendors_no_id(self):
-
         data = dict(
-            name = 'Test vendor',
-            address_line_1 = 'Test address',
-            currency = 'GBP'
+            name='Test vendor',
+            address_line_1='Test address',
+            currency='GBP'
         )
 
         # Bug 795839 - CustomerNextID() / VendorNextID() output critical gnc.backend.dbi errors 
@@ -930,10 +931,10 @@ class VendorsSessionTestCase(ApiSessionTestCase):
 
     def test_vendors_empty_id(self):
         data = dict(
-            id = '',
-            name = 'Test vendor',
-            address_line_1 = 'Test address',
-            currency = 'GBP'
+            id='',
+            name='Test vendor',
+            address_line_1='Test address',
+            currency='GBP'
         )
 
         # Bug 795839 - CustomerNextID() / VendorNextID() output critical gnc.backend.dbi errors 
@@ -945,12 +946,11 @@ class VendorsSessionTestCase(ApiSessionTestCase):
         assert self.app.post('/vendors', data=data).status == '201 CREATED'
 
     def test_add_vendor(self):
-
         data = dict(
-            id = '999999',
-            name = 'Test vendor',
-            address_line_1 = 'Test address',
-            currency = 'GBP'
+            id='999999',
+            name='Test vendor',
+            address_line_1='Test address',
+            currency='GBP'
         )
 
         assert self.app.post('/vendors', data=data).status == '201 CREATED'
@@ -959,13 +959,11 @@ class VendorsSessionTestCase(ApiSessionTestCase):
         assert self.app.get('/vendors/999999').status == '404 NOT FOUND'
 
     def test_get_vendor(self):
-
         self.createVendor()
 
         assert json.loads(self.clean(self.app.get('/vendors/999999', data=dict()).data))['id'] == '999999'
 
     def test_get_vendors(self):
-
         self.createVendor()
 
         assert json.loads(self.clean(self.app.get('/vendors', data=dict()).data))[0]['id'] == '999999'
@@ -978,20 +976,18 @@ class VendorsSessionTestCase(ApiSessionTestCase):
     # No checks on vendor / bill options e.g active
 
     def test_get_empty_vendor_bills(self):
-
         self.createVendor()
 
         assert self.clean(self.app.get('/vendors/999999/bills').data) == '[]'
 
     def test_get_invalid_date_vendor_bills(self):
-
         self.createVendor()
 
         assert self.get_error_type('get', '/vendors/999999/bills?date_due_from=XXX', dict()) == 'InvalidDateDueFrom'
 
     def test_get_empty_vendors(self):
-
         assert self.clean(self.app.get('/vendors').data) == '[]'
+
 
 # Copy of VendorsTestCase with names changed
 class CustomersTestCase(ApiTestCase):
@@ -1005,6 +1001,7 @@ class CustomersTestCase(ApiTestCase):
     def test_customer_bills_no_session(self):
         assert self.get_error_type('get', '/customers/XXX/invoices', dict()) == 'SessionDoesNotExist'
 
+
 # Copy of VendorsSessionTestCase with names changed
 class CustomersSessionTestCase(ApiSessionTestCase):
 
@@ -1013,34 +1010,33 @@ class CustomersSessionTestCase(ApiSessionTestCase):
 
     def test_add_customer_no_address(self):
         data = dict(
-            name = 'Test customer'
+            name='Test customer'
         )
 
         assert self.get_error_type('post', '/customers', data=data) == 'NoCustomerAddress'
 
     def test_add_customer_no_currency(self):
         data = dict(
-            name = 'Test customer',
-            address_line_1 = 'Test address'
+            name='Test customer',
+            address_line_1='Test address'
         )
 
         assert self.get_error_type('post', '/customers', data=data) == 'InvalidCustomerCurrency'
 
     def test_add_customer_invalid_currency(self):
         data = dict(
-            name = 'Test customer',
-            address_line_1 = 'Test address',
-            currency = 'XYZ'
+            name='Test customer',
+            address_line_1='Test address',
+            currency='XYZ'
         )
 
         assert self.get_error_type('post', '/customers', data=data) == 'InvalidCustomerCurrency'
 
     def test_customers_no_id(self):
-
         data = dict(
-            name = 'Test customer',
-            address_line_1 = 'Test address',
-            currency = 'GBP'
+            name='Test customer',
+            address_line_1='Test address',
+            currency='GBP'
         )
 
         # Bug 795839 - CustomerNextID() / VendorNextID() output critical gnc.backend.dbi errors 
@@ -1053,10 +1049,10 @@ class CustomersSessionTestCase(ApiSessionTestCase):
 
     def test_customers_empty_id(self):
         data = dict(
-            id = '',
-            name = 'Test customer',
-            address_line_1 = 'Test address',
-            currency = 'GBP'
+            id='',
+            name='Test customer',
+            address_line_1='Test address',
+            currency='GBP'
         )
 
         # Bug 795839 - CustomerNextID() / VendorNextID() output critical gnc.backend.dbi errors 
@@ -1068,12 +1064,11 @@ class CustomersSessionTestCase(ApiSessionTestCase):
         assert self.app.post('/customers', data=data).status == '201 CREATED'
 
     def test_add_customer(self):
-
         data = dict(
-            id = '999999',
-            name = 'Test customer',
-            address_line_1 = 'Test address',
-            currency = 'GBP'
+            id='999999',
+            name='Test customer',
+            address_line_1='Test address',
+            currency='GBP'
         )
 
         assert self.app.post('/customers', data=data).status == '201 CREATED'
@@ -1082,7 +1077,6 @@ class CustomersSessionTestCase(ApiSessionTestCase):
         assert self.app.get('/customers/999999').status == '404 NOT FOUND'
 
     def test_get_customer(self):
-
         self.createCustomer()
 
         assert json.loads(self.clean(self.app.get('/customers/999999', data=dict()).data))['id'] == '999999'
@@ -1101,26 +1095,24 @@ class CustomersSessionTestCase(ApiSessionTestCase):
         self.createCustomer()
 
         data = dict(
-            id = '999999',
-            name = 'Test company'
+            id='999999',
+            name='Test company'
         )
 
         assert self.get_error_type('post', '/customers/999999', data=data) == 'NoCustomerAddress'
 
     def test_update_customer(self):
-
         self.createCustomer()
 
         data = dict(
-            id = '999999',
-            name = 'Updated company',
-            address_line_1 = 'Test address'
+            id='999999',
+            name='Updated company',
+            address_line_1='Test address'
         )
 
         assert json.loads(self.clean(self.app.post('/customers/999999', data=data).data))['name'] == 'Updated company'
 
     def test_get_customers(self):
-
         self.createCustomer()
 
         assert json.loads(self.clean(self.app.get('/customers', data=dict()).data))[0]['id'] == '999999'
@@ -1138,13 +1130,14 @@ class CustomersSessionTestCase(ApiSessionTestCase):
         assert self.clean(self.app.get('/customers/999999/invoices').data) == '[]'
 
     def test_get_invalid_date_customer_invoices(self):
-
         self.createCustomer()
 
-        assert self.get_error_type('get', '/customers/999999/invoices?date_due_from=XXX', dict()) == 'InvalidDateDueFrom'
+        assert self.get_error_type('get', '/customers/999999/invoices?date_due_from=XXX',
+                                   dict()) == 'InvalidDateDueFrom'
 
     def test_get_empty_customers(self):
         assert self.clean(self.app.get('/customers').data) == '[]'
+
 
 class InvoicesTestCase(ApiTestCase):
 
@@ -1154,6 +1147,7 @@ class InvoicesTestCase(ApiTestCase):
     def test_invoice_no_session(self):
         assert self.get_error_type('get', '/invoices/XXXXXX', dict()) == 'SessionDoesNotExist'
 
+
 class InvoicesSessionTestCase(ApiSessionTestCase):
 
     def test_add_invoice_no_parameters(self):
@@ -1161,66 +1155,65 @@ class InvoicesSessionTestCase(ApiSessionTestCase):
 
     def test_add_invoice_invalid_customer(self):
         data = dict(
-            customer_id = 'XXXXXX',
+            customer_id='XXXXXX',
         )
 
         assert self.get_error_type('post', '/invoices', data=data) == 'NoCustomer'
 
     def test_add_invoice_no_date_opened(self):
         data = dict(
-            customer_id = self.createCustomer()['id'],
+            customer_id=self.createCustomer()['id'],
         )
 
         assert self.get_error_type('post', '/invoices', data=data) == 'InvalidDateOpened'
 
     def test_add_invoice_empty_date_opened(self):
         data = dict(
-            customer_id = self.createCustomer()['id'],
-            date_opened = '',
+            customer_id=self.createCustomer()['id'],
+            date_opened='',
         )
 
         assert self.get_error_type('post', '/invoices', data=data) == 'InvalidDateOpened'
 
     def test_add_invoice_invalid_date_opened(self):
         data = dict(
-            customer_id = self.createCustomer()['id'],
-            date_opened = 'XXX',
+            customer_id=self.createCustomer()['id'],
+            date_opened='XXX',
         )
 
         assert self.get_error_type('post', '/invoices', data=data) == 'InvalidDateOpened'
 
     def test_add_invoice_no_currency(self):
         data = dict(
-            customer_id = self.createCustomer()['id'],
-            date_opened = '2010-01-01',
+            customer_id=self.createCustomer()['id'],
+            date_opened='2010-01-01',
         )
 
         assert self.get_error_type('post', '/invoices', data=data) == 'InvalidInvoiceCurrency'
 
     def test_add_invoice_invalid_currency(self):
         data = dict(
-            customer_id = self.createCustomer()['id'],
-            date_opened = '2010-01-01',
-            currency = 'XYZ'
+            customer_id=self.createCustomer()['id'],
+            date_opened='2010-01-01',
+            currency='XYZ'
         )
 
         assert self.get_error_type('post', '/invoices', data=data) == 'InvalidInvoiceCurrency'
 
     def test_add_invoice_non_matching_currency(self):
         data = dict(
-            customer_id = self.createCustomer()['id'],
-            date_opened = '2010-01-01',
-            currency = 'USD' # self.createCustomer() will have GBP
+            customer_id=self.createCustomer()['id'],
+            date_opened='2010-01-01',
+            currency='USD'  # self.createCustomer() will have GBP
         )
 
         assert self.get_error_type('post', '/invoices', data=data) == 'MismatchedInvoiceCurrency'
 
     def test_add_invoice_no_id(self):
-
         data = dict(
-            customer_id = self.createCustomer()['id'],
-            date_opened = '2010-01-01',
-            currency = 'GBP'
+            customer_id=self.createCustomer()['id'],
+            date_opened='2010-01-01',
+            currency='GBP'
         )
 
         assert json.loads(self.clean(self.app.post('/invoices', data=data).data))['id'] == '000001'
@@ -1245,17 +1238,17 @@ class InvoicesSessionTestCase(ApiSessionTestCase):
         invoice = self.createInvoice()
 
         data = dict(
-            customer_id = '888888',
+            customer_id='888888',
         )
-        
+
         assert self.get_error_type('post', '/invoices/999999', data=data) == 'NoCustomer'
 
     def test_update_invoice_no_date_opened(self):
         invoice = self.createInvoice()
 
         data = dict(
-            customer_id = self.createCustomer()['id'],
-            date_opened = '',
+            customer_id=self.createCustomer()['id'],
+            date_opened='',
         )
 
         assert self.get_error_type('post', '/invoices/999999', data=data) == 'InvalidDateOpened'
@@ -1264,8 +1257,8 @@ class InvoicesSessionTestCase(ApiSessionTestCase):
         invoice = self.createInvoice()
 
         data = dict(
-            customer_id = self.createCustomer()['id'],
-            date_opened = 'XXX',
+            customer_id=self.createCustomer()['id'],
+            date_opened='XXX',
         )
 
         assert self.get_error_type('post', '/invoices/999999', data=data) == 'InvalidDateOpened'
@@ -1274,9 +1267,9 @@ class InvoicesSessionTestCase(ApiSessionTestCase):
         invoice = self.createInvoice()
 
         data = dict(
-            customer_id = self.createCustomer()['id'],
-            date_opened = '2010-01-01',
-            posted = '1'
+            customer_id=self.createCustomer()['id'],
+            date_opened='2010-01-01',
+            posted='1'
         )
 
         assert self.get_error_type('post', '/invoices/999999', data=data) == 'NoDatePosted'
@@ -1285,10 +1278,10 @@ class InvoicesSessionTestCase(ApiSessionTestCase):
         invoice = self.createInvoice()
 
         data = dict(
-            customer_id = self.createCustomer()['id'],
-            date_opened = '2010-01-01',
-            posted = '1',
-            posted_date = 'XXX'
+            customer_id=self.createCustomer()['id'],
+            date_opened='2010-01-01',
+            posted='1',
+            posted_date='XXX'
         )
 
         assert self.get_error_type('post', '/invoices/999999', data=data) == 'InvalidDatePosted'
@@ -1297,10 +1290,10 @@ class InvoicesSessionTestCase(ApiSessionTestCase):
         invoice = self.createInvoice()
 
         data = dict(
-            customer_id = self.createCustomer()['id'],
-            date_opened = '2010-01-01',
-            posted = '1',
-            posted_date = '2010-01-01'
+            customer_id=self.createCustomer()['id'],
+            date_opened='2010-01-01',
+            posted='1',
+            posted_date='2010-01-01'
         )
 
         assert self.get_error_type('post', '/invoices/999999', data=data) == 'NoDateDue'
@@ -1309,11 +1302,11 @@ class InvoicesSessionTestCase(ApiSessionTestCase):
         invoice = self.createInvoice()
 
         data = dict(
-            customer_id = self.createCustomer()['id'],
-            date_opened = '2010-01-01',
-            posted = '1',
-            posted_date = '2010-01-01',
-            due_date = 'XXX'
+            customer_id=self.createCustomer()['id'],
+            date_opened='2010-01-01',
+            posted='1',
+            posted_date='2010-01-01',
+            due_date='XXX'
         )
 
         assert self.get_error_type('post', '/invoices/999999', data=data) == 'InvalidDateDue'
@@ -1322,11 +1315,11 @@ class InvoicesSessionTestCase(ApiSessionTestCase):
         invoice = self.createInvoice()
 
         data = dict(
-            customer_id = self.createCustomer()['id'],
-            date_opened = '2010-01-01',
-            posted = '1',
-            posted_date = '2010-01-01',
-            due_date = '2010-01-01'
+            customer_id=self.createCustomer()['id'],
+            date_opened='2010-01-01',
+            posted='1',
+            posted_date='2010-01-01',
+            due_date='2010-01-01'
         )
 
         assert self.get_error_type('post', '/invoices/999999', data=data) == 'NoPostedAccountGuid'
@@ -1335,12 +1328,12 @@ class InvoicesSessionTestCase(ApiSessionTestCase):
         invoice = self.createInvoice()
 
         data = dict(
-            customer_id = self.createCustomer()['id'],
-            date_opened = '2010-01-01',
-            posted = '1',
-            posted_date = '2010-01-01',
-            due_date = '2010-01-01',
-            posted_account_guid = 'XXX'
+            customer_id=self.createCustomer()['id'],
+            date_opened='2010-01-01',
+            posted='1',
+            posted_date='2010-01-01',
+            due_date='2010-01-01',
+            posted_account_guid='XXX'
         )
 
         assert self.get_error_type('post', '/invoices/999999', data=data) == 'NoAccount'
@@ -1350,12 +1343,12 @@ class InvoicesSessionTestCase(ApiSessionTestCase):
         account = self.createAccount()
 
         data = dict(
-            customer_id = self.createCustomer()['id'],
-            date_opened = '2010-01-01',
-            posted = '1',
-            posted_date = '2010-01-01',
-            due_date = '2010-01-01',
-            posted_account_guid = account['guid']
+            customer_id=self.createCustomer()['id'],
+            date_opened='2010-01-01',
+            posted='1',
+            posted_date='2010-01-01',
+            due_date='2010-01-01',
+            posted_account_guid=account['guid']
         )
 
         assert json.loads(self.clean(self.app.post('/invoices/999999', data=data).data))['posted'] == True
@@ -1366,8 +1359,8 @@ class InvoicesSessionTestCase(ApiSessionTestCase):
         # Why does it need these? Shouldn't one field be enough -it expects all fields rest will be blank
 
         data = dict(
-            customer_id = self.createCustomer()['id'],
-            date_opened = '2010-01-01',
+            customer_id=self.createCustomer()['id'],
+            date_opened='2010-01-01',
         )
 
         assert json.loads(self.clean(self.app.post('/invoices/999999', data=data).data))['id'] == '999999'
@@ -1383,8 +1376,8 @@ class InvoicesSessionTestCase(ApiSessionTestCase):
     def test_pay_invoice_invalid_payment_date(self):
         invoice = self.createInvoice()
 
-        data=dict(
-            payment_date = 'XXX'
+        data = dict(
+            payment_date='XXX'
         )
 
         assert self.get_error_type('pay', '/invoices/999999', data=data) == 'InvalidPaymentDate'
@@ -1392,8 +1385,8 @@ class InvoicesSessionTestCase(ApiSessionTestCase):
     def test_pay_invoice_no_transfer_account(self):
         invoice = self.createInvoice()
 
-        data=dict(
-            payment_date = '2010-01-01'
+        data = dict(
+            payment_date='2010-01-01'
         )
 
         assert self.get_error_type('pay', '/invoices/999999', data=data) == 'NoTransferAccount'
@@ -1401,9 +1394,9 @@ class InvoicesSessionTestCase(ApiSessionTestCase):
     def test_pay_invoice_invalid_transfer_account(self):
         invoice = self.createInvoice()
 
-        data=dict(
-            payment_date = '2010-01-01',
-            transfer_account_guid = 'XXX'
+        data = dict(
+            payment_date='2010-01-01',
+            transfer_account_guid='XXX'
         )
 
         assert self.get_error_type('pay', '/invoices/999999', data=data) == 'NoTransferAccount'
@@ -1412,19 +1405,19 @@ class InvoicesSessionTestCase(ApiSessionTestCase):
         invoice = self.createInvoice()
 
         data = dict(
-            customer_id = self.createCustomer()['id'],
-            date_opened = '2010-01-01',
-            posted = '1',
-            posted_date = '2010-01-01',
-            due_date = '2010-01-01',
-            posted_account_guid = self.createAccount()['guid']
+            customer_id=self.createCustomer()['id'],
+            date_opened='2010-01-01',
+            posted='1',
+            posted_date='2010-01-01',
+            due_date='2010-01-01',
+            posted_account_guid=self.createAccount()['guid']
         )
 
         assert json.loads(self.clean(self.app.post('/invoices/999999', data=data).data))['posted'] == True
 
         data = dict(
-            payment_date = '2010-01-01',
-            transfer_account_guid = self.createAccount()['guid']
+            payment_date='2010-01-01',
+            transfer_account_guid=self.createAccount()['guid']
         )
 
         assert json.loads(self.clean(self.app.open('/invoices/999999', data=data, method='pay').data))['paid'] == True
@@ -1486,10 +1479,12 @@ class InvoicesSessionTestCase(ApiSessionTestCase):
     def test_invoices_date_posted_to(self):
         assert self.clean(self.app.get('/invoices?date_posted_to=2010-01-01').data) == '[]'
 
+
 class BillsTestCase(ApiTestCase):
 
     def test_bills_no_session(self):
         assert self.get_error_type('get', '/bills', dict()) == 'SessionDoesNotExist'
+
 
 # This is identical to invoices....
 class BillsSessionTestCase(ApiSessionTestCase):
@@ -1499,66 +1494,65 @@ class BillsSessionTestCase(ApiSessionTestCase):
 
     def test_add_bill_invalid_vendor(self):
         data = dict(
-            vendor_id = 'XXXXXX',
+            vendor_id='XXXXXX',
         )
 
         assert self.get_error_type('post', '/bills', data=data) == 'NoVendor'
 
     def test_add_bill_no_date_opened(self):
         data = dict(
-            vendor_id = self.createVendor()['id'],
+            vendor_id=self.createVendor()['id'],
         )
 
         assert self.get_error_type('post', '/bills', data=data) == 'InvalidDateOpened'
 
     def test_add_bill_empty_date_opened(self):
         data = dict(
-            vendor_id = self.createVendor()['id'],
-            date_opened = '',
+            vendor_id=self.createVendor()['id'],
+            date_opened='',
         )
 
         assert self.get_error_type('post', '/bills', data=data) == 'InvalidDateOpened'
 
     def test_add_bill_invalid_date_opened(self):
         data = dict(
-            vendor_id = self.createVendor()['id'],
-            date_opened = 'XXX',
+            vendor_id=self.createVendor()['id'],
+            date_opened='XXX',
         )
 
         assert self.get_error_type('post', '/bills', data=data) == 'InvalidDateOpened'
 
     def test_add_bill_no_currency(self):
         data = dict(
-            vendor_id = self.createVendor()['id'],
-            date_opened = '2010-01-01',
+            vendor_id=self.createVendor()['id'],
+            date_opened='2010-01-01',
         )
 
         assert self.get_error_type('post', '/bills', data=data) == 'InvalidBillCurrency'
 
     def test_add_bill_invalid_currency(self):
         data = dict(
-            vendor_id = self.createVendor()['id'],
-            date_opened = '2010-01-01',
-            currency = 'XYZ'
+            vendor_id=self.createVendor()['id'],
+            date_opened='2010-01-01',
+            currency='XYZ'
         )
 
         assert self.get_error_type('post', '/bills', data=data) == 'InvalidBillCurrency'
 
     def test_add_bill_non_matching_currency(self):
         data = dict(
-            vendor_id = self.createVendor()['id'],
-            date_opened = '2010-01-01',
-            currency = 'USD' # self.createVendor() will have GBP
+            vendor_id=self.createVendor()['id'],
+            date_opened='2010-01-01',
+            currency='USD'  # self.createVendor() will have GBP
         )
 
         assert self.get_error_type('post', '/bills', data=data) == 'MismatchedBillCurrency'
 
     def test_add_bill_no_id(self):
-
         data = dict(
-            vendor_id = self.createVendor()['id'],
-            date_opened = '2010-01-01',
-            currency = 'GBP'
+            vendor_id=self.createVendor()['id'],
+            date_opened='2010-01-01',
+            currency='GBP'
         )
 
         assert json.loads(self.clean(self.app.post('/bills', data=data).data))['id'] == '000001'
@@ -1583,17 +1577,17 @@ class BillsSessionTestCase(ApiSessionTestCase):
         bill = self.createBill()
 
         data = dict(
-            vendor_id = '888888',
+            vendor_id='888888',
         )
-        
+
         assert self.get_error_type('post', '/bills/999999', data=data) == 'NoVendor'
 
     def test_update_bill_no_date_opened(self):
         bill = self.createBill()
 
         data = dict(
-            vendor_id = self.createVendor()['id'],
-            date_opened = '',
+            vendor_id=self.createVendor()['id'],
+            date_opened='',
         )
 
         assert self.get_error_type('post', '/bills/999999', data=data) == 'InvalidDateOpened'
@@ -1602,8 +1596,8 @@ class BillsSessionTestCase(ApiSessionTestCase):
         bill = self.createBill()
 
         data = dict(
-            vendor_id = self.createVendor()['id'],
-            date_opened = 'XXX',
+            vendor_id=self.createVendor()['id'],
+            date_opened='XXX',
         )
 
         assert self.get_error_type('post', '/bills/999999', data=data) == 'InvalidDateOpened'
@@ -1612,9 +1606,9 @@ class BillsSessionTestCase(ApiSessionTestCase):
         bill = self.createBill()
 
         data = dict(
-            vendor_id = self.createVendor()['id'],
-            date_opened = '2010-01-01',
-            posted = '1'
+            vendor_id=self.createVendor()['id'],
+            date_opened='2010-01-01',
+            posted='1'
         )
 
         assert self.get_error_type('post', '/bills/999999', data=data) == 'NoDatePosted'
@@ -1623,23 +1617,22 @@ class BillsSessionTestCase(ApiSessionTestCase):
         bill = self.createBill()
 
         data = dict(
-            vendor_id = self.createVendor()['id'],
-            date_opened = '2010-01-01',
-            posted = '1',
-            posted_date = 'XXX'
+            vendor_id=self.createVendor()['id'],
+            date_opened='2010-01-01',
+            posted='1',
+            posted_date='XXX'
         )
 
         assert self.get_error_type('post', '/bills/999999', data=data) == 'InvalidDatePosted'
-
 
     def test_post_bill_no_date_due(self):
         bill = self.createBill()
 
         data = dict(
-            vendor_id = self.createVendor()['id'],
-            date_opened = '2010-01-01',
-            posted = '1',
-            posted_date = '2010-01-01'
+            vendor_id=self.createVendor()['id'],
+            date_opened='2010-01-01',
+            posted='1',
+            posted_date='2010-01-01'
         )
 
         assert self.get_error_type('post', '/bills/999999', data=data) == 'NoDateDue'
@@ -1648,11 +1641,11 @@ class BillsSessionTestCase(ApiSessionTestCase):
         bill = self.createBill()
 
         data = dict(
-            vendor_id = self.createVendor()['id'],
-            date_opened = '2010-01-01',
-            posted = '1',
-            posted_date = '2010-01-01',
-            due_date = 'XXX'
+            vendor_id=self.createVendor()['id'],
+            date_opened='2010-01-01',
+            posted='1',
+            posted_date='2010-01-01',
+            due_date='XXX'
         )
 
         assert self.get_error_type('post', '/bills/999999', data=data) == 'InvalidDateDue'
@@ -1661,11 +1654,11 @@ class BillsSessionTestCase(ApiSessionTestCase):
         bill = self.createBill()
 
         data = dict(
-            vendor_id = self.createVendor()['id'],
-            date_opened = '2010-01-01',
-            posted = '1',
-            posted_date = '2010-01-01',
-            due_date = '2010-01-01'
+            vendor_id=self.createVendor()['id'],
+            date_opened='2010-01-01',
+            posted='1',
+            posted_date='2010-01-01',
+            due_date='2010-01-01'
         )
 
         assert self.get_error_type('post', '/bills/999999', data=data) == 'NoPostedAccountGuid'
@@ -1674,12 +1667,12 @@ class BillsSessionTestCase(ApiSessionTestCase):
         bill = self.createBill()
 
         data = dict(
-            vendor_id = self.createVendor()['id'],
-            date_opened = '2010-01-01',
-            posted = '1',
-            posted_date = '2010-01-01',
-            due_date = '2010-01-01',
-            posted_account_guid = 'XXX'
+            vendor_id=self.createVendor()['id'],
+            date_opened='2010-01-01',
+            posted='1',
+            posted_date='2010-01-01',
+            due_date='2010-01-01',
+            posted_account_guid='XXX'
         )
 
         assert self.get_error_type('post', '/bills/999999', data=data) == 'NoAccount'
@@ -1689,12 +1682,12 @@ class BillsSessionTestCase(ApiSessionTestCase):
         account = self.createAccount()
 
         data = dict(
-            vendor_id = self.createVendor()['id'],
-            date_opened = '2010-01-01',
-            posted = '1',
-            posted_date = '2010-01-01',
-            due_date = '2010-01-01',
-            posted_account_guid = account['guid']
+            vendor_id=self.createVendor()['id'],
+            date_opened='2010-01-01',
+            posted='1',
+            posted_date='2010-01-01',
+            due_date='2010-01-01',
+            posted_account_guid=account['guid']
         )
 
         assert json.loads(self.clean(self.app.post('/bills/999999', data=data).data))['posted'] == True
@@ -1705,8 +1698,8 @@ class BillsSessionTestCase(ApiSessionTestCase):
         # Why does it need these? Shouldn't one field be enough -it expects all fields rest will be blank
 
         data = dict(
-            vendor_id = self.createVendor()['id'],
-            date_opened = '2010-01-01',
+            vendor_id=self.createVendor()['id'],
+            date_opened='2010-01-01',
         )
 
         assert json.loads(self.clean(self.app.post('/bills/999999', data=data).data))['id'] == '999999'
@@ -1722,8 +1715,8 @@ class BillsSessionTestCase(ApiSessionTestCase):
     def test_pay_bill_invalid_payment_date(self):
         bill = self.createBill()
 
-        data=dict(
-            payment_date = 'XXX'
+        data = dict(
+            payment_date='XXX'
         )
 
         assert self.get_error_type('pay', '/bills/999999', data=data) == 'InvalidPaymentDate'
@@ -1731,8 +1724,8 @@ class BillsSessionTestCase(ApiSessionTestCase):
     def test_pay_bill_no_transfer_account(self):
         bill = self.createBill()
 
-        data=dict(
-            payment_date = '2010-01-01'
+        data = dict(
+            payment_date='2010-01-01'
         )
 
         assert self.get_error_type('pay', '/bills/999999', data=data) == 'NoTransferAccount'
@@ -1740,9 +1733,9 @@ class BillsSessionTestCase(ApiSessionTestCase):
     def test_pay_bill_invalid_transfer_account(self):
         bill = self.createBill()
 
-        data=dict(
-            payment_date = '2010-01-01',
-            transfer_account_guid = 'XXX'
+        data = dict(
+            payment_date='2010-01-01',
+            transfer_account_guid='XXX'
         )
 
         assert self.get_error_type('pay', '/bills/999999', data=data) == 'NoTransferAccount'
@@ -1751,19 +1744,19 @@ class BillsSessionTestCase(ApiSessionTestCase):
         bill = self.createBill()
 
         data = dict(
-            vendor_id = self.createVendor()['id'],
-            date_opened = '2010-01-01',
-            posted = '1',
-            posted_date = '2010-01-01',
-            due_date = '2010-01-01',
-            posted_account_guid = self.createAccount()['guid']
+            vendor_id=self.createVendor()['id'],
+            date_opened='2010-01-01',
+            posted='1',
+            posted_date='2010-01-01',
+            due_date='2010-01-01',
+            posted_account_guid=self.createAccount()['guid']
         )
 
         assert json.loads(self.clean(self.app.post('/bills/999999', data=data).data))['posted'] == True
 
         data = dict(
-            payment_date = '2010-01-01',
-            transfer_account_guid = self.createAccount()['guid']
+            payment_date='2010-01-01',
+            transfer_account_guid=self.createAccount()['guid']
         )
 
         assert json.loads(self.clean(self.app.open('/bills/999999', data=data, method='pay').data))['paid'] == True
@@ -1828,10 +1821,12 @@ class BillsSessionTestCase(ApiSessionTestCase):
     def test_bills_date_posted_to(self):
         assert self.clean(self.app.get('/bills?date_posted_to=2010-01-01').data) == '[]'
 
+
 class InvoiceEntriesTestCase(ApiTestCase):
 
     def test_entries_no_session(self):
         assert self.get_error_type('get', '/invoices/XXXXXX/entries', dict()) == 'SessionDoesNotExist'
+
 
 class InvoiceEntriesSessionTestCase(ApiSessionTestCase):
 
@@ -1842,131 +1837,146 @@ class InvoiceEntriesSessionTestCase(ApiSessionTestCase):
         assert json.loads(self.clean(self.app.get('/invoices/' + self.createInvoice()['id'] + '/entries').data)) == []
 
     def test_add_entry_no_date_opened(self):
-        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries', data=dict()) == 'InvalidDateOpened'
+        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries',
+                                   data=dict()) == 'InvalidDateOpened'
 
     def test_add_entry_invalid_date_opened(self):
-        data=dict(
-            date = 'XXX'
+        data = dict(
+            date='XXX'
         )
 
-        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries', data=data) == 'InvalidDateOpened'
+        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries',
+                                   data=data) == 'InvalidDateOpened'
 
     def test_add_entry_no_discount_type(self):
-        data=dict(
-            date = '2010-01-01'
+        data = dict(
+            date='2010-01-01'
         )
 
-        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries', data=data) == 'UnsupportedDiscountType'
+        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries',
+                                   data=data) == 'UnsupportedDiscountType'
 
     def test_add_entry_no_account(self):
-        data=dict(
-            date = '2010-01-01',
-            discount_type = '1'
+        data = dict(
+            date='2010-01-01',
+            discount_type='1'
         )
 
-        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries', data=data) == 'NoAccount'
+        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries',
+                                   data=data) == 'NoAccount'
 
     def test_add_entry_invalid_account(self):
-        data=dict(
-            date = '2010-01-01',
-            discount_type = '1',
-            account_guid = 'XXX'
+        data = dict(
+            date='2010-01-01',
+            discount_type='1',
+            account_guid='XXX'
         )
 
-        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries', data=data) == 'NoAccount'
+        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries',
+                                   data=data) == 'NoAccount'
 
     def test_add_entry_invalid_quantity(self):
-        data=dict(
-            date = '2010-01-01',
-            discount_type = '1',
-            account_guid = self.createAccount()['guid']
+        data = dict(
+            date='2010-01-01',
+            discount_type='1',
+            account_guid=self.createAccount()['guid']
         )
 
-        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries', data=data) == 'InvalidQuantity'
+        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries',
+                                   data=data) == 'InvalidQuantity'
 
     def test_add_entry_no_quantity(self):
-        data=dict(
-            date = '2010-01-01',
-            discount_type = '1',
-            account_guid = self.createAccount()['guid'],
-            quantity = ''
+        data = dict(
+            date='2010-01-01',
+            discount_type='1',
+            account_guid=self.createAccount()['guid'],
+            quantity=''
         )
 
-        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries', data=data) == 'InvalidQuantity'
+        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries',
+                                   data=data) == 'InvalidQuantity'
 
     def test_add_entry_invalid_quantity(self):
-        data=dict(
-            date = '2010-01-01',
-            discount_type = '1',
-            account_guid = self.createAccount()['guid'],
-            quantity = 'XXX'
+        data = dict(
+            date='2010-01-01',
+            discount_type='1',
+            account_guid=self.createAccount()['guid'],
+            quantity='XXX'
         )
 
-        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries', data=data) == 'InvalidQuantity'
+        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries',
+                                   data=data) == 'InvalidQuantity'
 
     def test_add_entry_no_price(self):
-        data=dict(
-            date = '2010-01-01',
-            discount_type = '1',
-            account_guid = self.createAccount()['guid'],
-            quantity = '1',
-            price = ''
+        data = dict(
+            date='2010-01-01',
+            discount_type='1',
+            account_guid=self.createAccount()['guid'],
+            quantity='1',
+            price=''
         )
 
-        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries', data=data) == 'InvalidPrice'
+        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries',
+                                   data=data) == 'InvalidPrice'
 
     def test_add_entry_invalid_price(self):
-        data=dict(
-            date = '2010-01-01',
-            discount_type = '1',
-            account_guid = self.createAccount()['guid'],
-            quantity = '1',
-            price = 'XXX'
+        data = dict(
+            date='2010-01-01',
+            discount_type='1',
+            account_guid=self.createAccount()['guid'],
+            quantity='1',
+            price='XXX'
         )
 
-        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries', data=data) == 'InvalidPrice'
+        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries',
+                                   data=data) == 'InvalidPrice'
 
     def test_add_entry_no_discount(self):
-        data=dict(
-            date = '2010-01-01',
-            discount_type = '1',
-            account_guid = self.createAccount()['guid'],
-            quantity = '1',
-            price = '1.00',
-            discount = ''
+        data = dict(
+            date='2010-01-01',
+            discount_type='1',
+            account_guid=self.createAccount()['guid'],
+            quantity='1',
+            price='1.00',
+            discount=''
         )
 
-        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries', data=data) == 'InvalidDiscount'
+        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries',
+                                   data=data) == 'InvalidDiscount'
 
     def test_add_entry_invalid_discount(self):
-        data=dict(
-            date = '2010-01-01',
-            discount_type = '1',
-            account_guid = self.createAccount()['guid'],
-            quantity = '1',
-            price = '1.00',
-            discount = 'XXX'
+        data = dict(
+            date='2010-01-01',
+            discount_type='1',
+            account_guid=self.createAccount()['guid'],
+            quantity='1',
+            price='1.00',
+            discount='XXX'
         )
 
-        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries', data=data) == 'InvalidDiscount'
-
+        assert self.get_error_type('post', '/invoices/' + self.createInvoice()['id'] + '/entries',
+                                   data=data) == 'InvalidDiscount'
 
     def test_add_entry(self):
-        data=dict(
-            date = '2010-01-01',
-            discount_type = '1',
-            account_guid = self.createAccount()['guid'],
-            quantity = 1,
-            price = '1.00',
-            discount = '0'
+        data = dict(
+            date='2010-01-01',
+            discount_type='1',
+            account_guid=self.createAccount()['guid'],
+            quantity=1,
+            price='1.00',
+            discount='0'
         )
 
-        assert json.loads(self.clean(self.app.post('/invoices/' + self.createInvoice()['id'] + '/entries', data=data).data))['inv_price'] == 1.0
+        assert \
+        json.loads(self.clean(self.app.post('/invoices/' + self.createInvoice()['id'] + '/entries', data=data).data))[
+            'inv_price'] == 1.0
+
 
 class BillEntriesTestCase(ApiTestCase):
 
     def test_bill_entries_no_session(self):
         assert self.get_error_type('get', '/bills/XXXXXX/entries', dict()) == 'SessionDoesNotExist'
+
 
 class BillEntriesSessionTestCase(ApiSessionTestCase):
 
@@ -1977,91 +1987,101 @@ class BillEntriesSessionTestCase(ApiSessionTestCase):
         assert json.loads(self.clean(self.app.get('/bills/' + self.createBill()['id'] + '/entries').data)) == []
 
     def test_add_bill_entry_no_date_opened(self):
-        assert self.get_error_type('post', '/bills/' + self.createBill()['id'] + '/entries', data=dict()) == 'InvalidDateOpened'
+        assert self.get_error_type('post', '/bills/' + self.createBill()['id'] + '/entries',
+                                   data=dict()) == 'InvalidDateOpened'
 
     def test_add_bill_entry_invalid_date_opened(self):
-        data=dict(
-            date = 'XXX'
+        data = dict(
+            date='XXX'
         )
 
-        assert self.get_error_type('post', '/bills/' + self.createBill()['id'] + '/entries', data=data) == 'InvalidDateOpened'
+        assert self.get_error_type('post', '/bills/' + self.createBill()['id'] + '/entries',
+                                   data=data) == 'InvalidDateOpened'
 
     def test_add_bill_entry_no_account(self):
-        data=dict(
-            date = '2010-01-01',
+        data = dict(
+            date='2010-01-01',
         )
 
         assert self.get_error_type('post', '/bills/' + self.createBill()['id'] + '/entries', data=data) == 'NoAccount'
 
     def test_add_bill_entry_invalid_account(self):
-        data=dict(
-            date = '2010-01-01',
-            account_guid = 'XXX'
+        data = dict(
+            date='2010-01-01',
+            account_guid='XXX'
         )
 
         assert self.get_error_type('post', '/bills/' + self.createBill()['id'] + '/entries', data=data) == 'NoAccount'
 
     def test_add_bill_entry_invalid_quantity(self):
-        data=dict(
-            date = '2010-01-01',
-            account_guid = self.createAccount()['guid']
+        data = dict(
+            date='2010-01-01',
+            account_guid=self.createAccount()['guid']
         )
 
-        assert self.get_error_type('post', '/bills/' + self.createBill()['id'] + '/entries', data=data) == 'InvalidQuantity'
+        assert self.get_error_type('post', '/bills/' + self.createBill()['id'] + '/entries',
+                                   data=data) == 'InvalidQuantity'
 
     def test_add_bill_entry_no_quantity(self):
-        data=dict(
-            date = '2010-01-01',
-            account_guid = self.createAccount()['guid'],
-            quantity = ''
+        data = dict(
+            date='2010-01-01',
+            account_guid=self.createAccount()['guid'],
+            quantity=''
         )
 
-        assert self.get_error_type('post', '/bills/' + self.createBill()['id'] + '/entries', data=data) == 'InvalidQuantity'
+        assert self.get_error_type('post', '/bills/' + self.createBill()['id'] + '/entries',
+                                   data=data) == 'InvalidQuantity'
 
     def test_add_bill_entry_invalid_quantity(self):
-        data=dict(
-            date = '2010-01-01',
-            account_guid = self.createAccount()['guid'],
-            quantity = 'XXX'
+        data = dict(
+            date='2010-01-01',
+            account_guid=self.createAccount()['guid'],
+            quantity='XXX'
         )
 
-        assert self.get_error_type('post', '/bills/' + self.createBill()['id'] + '/entries', data=data) == 'InvalidQuantity'
+        assert self.get_error_type('post', '/bills/' + self.createBill()['id'] + '/entries',
+                                   data=data) == 'InvalidQuantity'
 
     def test_add_bill_entry_no_price(self):
-        data=dict(
-            date = '2010-01-01',
-            account_guid = self.createAccount()['guid'],
-            quantity = '1',
-            price = ''
+        data = dict(
+            date='2010-01-01',
+            account_guid=self.createAccount()['guid'],
+            quantity='1',
+            price=''
         )
 
-        assert self.get_error_type('post', '/bills/' + self.createBill()['id'] + '/entries', data=data) == 'InvalidPrice'
+        assert self.get_error_type('post', '/bills/' + self.createBill()['id'] + '/entries',
+                                   data=data) == 'InvalidPrice'
 
     def test_add_bill_entry_invalid_price(self):
-        data=dict(
-            date = '2010-01-01',
-            account_guid = self.createAccount()['guid'],
-            quantity = '1',
-            price = 'XXX'
+        data = dict(
+            date='2010-01-01',
+            account_guid=self.createAccount()['guid'],
+            quantity='1',
+            price='XXX'
         )
 
-        assert self.get_error_type('post', '/bills/' + self.createBill()['id'] + '/entries', data=data) == 'InvalidPrice'
+        assert self.get_error_type('post', '/bills/' + self.createBill()['id'] + '/entries',
+                                   data=data) == 'InvalidPrice'
 
     def test_add_bill_entry(self):
-        data=dict(
-            date = '2010-01-01',
-            discount_type = '1',
-            account_guid = self.createAccount()['guid'],
-            quantity = 1,
-            price = '1.00',
+        data = dict(
+            date='2010-01-01',
+            discount_type='1',
+            account_guid=self.createAccount()['guid'],
+            quantity=1,
+            price='1.00',
         )
 
-        assert json.loads(self.clean(self.app.post('/bills/' + self.createBill()['id'] + '/entries', data=data).data))['bill_price'] == 1.0
+        assert json.loads(self.clean(self.app.post('/bills/' + self.createBill()['id'] + '/entries', data=data).data))[
+                   'bill_price'] == 1.0
+
 
 class EntriesTestCase(ApiTestCase):
 
     def test_entry_no_session(self):
         assert self.get_error_type('get', '/entries/00000000000000000000000000000000', dict()) == 'SessionDoesNotExist'
+
 
 class EntriesSessionTestCase(ApiSessionTestCase):
 
@@ -2078,78 +2098,76 @@ class EntriesSessionTestCase(ApiSessionTestCase):
 
     def test_update_entry_no_discount_type(self):
         data = dict(
-            date = '2010-01-01'
+            date='2010-01-01'
         )
 
-        assert self.get_error_type('post', '/entries/' + self.createEntry()['guid'], data=data) == 'UnsupportedDiscountType'
+        assert self.get_error_type('post', '/entries/' + self.createEntry()['guid'],
+                                   data=data) == 'UnsupportedDiscountType'
 
     def test_update_entry_no_account(self):
         data = dict(
-            date = '2010-01-01',
-            discount_type = '1'
+            date='2010-01-01',
+            discount_type='1'
         )
 
         assert self.get_error_type('post', '/entries/' + self.createEntry()['guid'], data=data) == 'NoAccount'
 
     def test_update_entry_invalid_account(self):
         data = dict(
-            date = '2010-01-01',
-            discount_type = '1'
+            date='2010-01-01',
+            discount_type='1'
         )
 
         assert self.get_error_type('post', '/entries/' + self.createEntry()['guid'], data=data) == 'NoAccount'
 
     def test_update_entry_invalid_quantity(self):
         data = dict(
-            date = '2010-01-01',
-            discount_type = '1',
-            account_guid = self.createAccount()['guid'],
+            date='2010-01-01',
+            discount_type='1',
+            account_guid=self.createAccount()['guid'],
         )
 
         assert self.get_error_type('post', '/entries/' + self.createEntry()['guid'], data=data) == 'InvalidQuantity'
 
     def test_update_entry_invalid_price(self):
         data = dict(
-            date = '2010-01-01',
-            discount_type = '1',
-            account_guid = self.createAccount()['guid'],
-            quantity = 1
+            date='2010-01-01',
+            discount_type='1',
+            account_guid=self.createAccount()['guid'],
+            quantity=1
         )
 
         assert self.get_error_type('post', '/entries/' + self.createEntry()['guid'], data=data) == 'InvalidPrice'
 
     def test_update_entry_invalid_discount(self):
         data = dict(
-            date = '2010-01-01',
-            discount_type = '1',
-            account_guid = self.createAccount()['guid'],
-            quantity = 1,
-            price = '1.00'
+            date='2010-01-01',
+            discount_type='1',
+            account_guid=self.createAccount()['guid'],
+            quantity=1,
+            price='1.00'
         )
 
         assert self.get_error_type('post', '/entries/' + self.createEntry()['guid'], data=data) == 'InvalidDiscount'
 
     def test_update_entry(self):
-
         data = dict(
-            date = '2010-01-01',
-            discount_type = '1',
-            account_guid = self.createAccount()['guid'],
-            quantity = 1,
-            price = '2.00',
-            discount = '0'
+            date='2010-01-01',
+            discount_type='1',
+            account_guid=self.createAccount()['guid'],
+            quantity=1,
+            price='2.00',
+            discount='0'
         )
-        
-        assert json.loads(self.clean(self.app.post('/entries/' + self.createEntry()['guid'], data=data).data))['inv_price'] == 2.0
+
+        assert json.loads(self.clean(self.app.post('/entries/' + self.createEntry()['guid'], data=data).data))[
+                   'inv_price'] == 2.0
 
     def test_delete_entry(self):
-
         # * 11:33:42  CRIT <qof.engine> [qof_commit_edit()] unbalanced call - resetting (was -1)
         # In entry.Destroy()
 
         assert self.app.delete('/entries/' + self.createEntry()['guid'], data=dict()).status == '200 OK'
-
-
 
 
 if __name__ == '__main__':
